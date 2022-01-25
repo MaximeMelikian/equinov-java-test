@@ -1,6 +1,7 @@
 package com.eqinov.recrutement.controller;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.eqinov.recrutement.consumption.ConsumptionDispatcher;
 import com.eqinov.recrutement.data.DataPoint;
 import com.eqinov.recrutement.data.Site;
 import com.eqinov.recrutement.repository.DataPointRepository;
@@ -23,7 +25,7 @@ import com.eqinov.recrutement.repository.SiteRepository;
 import com.eqinov.recrutement.utils.DateUtils;
 
 /**
- * Controller Spring permettant l'affichage des données dans la seule vue de
+ * Controller Spring permettant l'affichage des donnï¿½es dans la seule vue de
  * l'application
  * 
  * @author Guillaume SIMON - EQINOV
@@ -40,7 +42,7 @@ public class WelcomeController {
 	private DataPointRepository dataPointRepository;
 
 	/**
-	 * Point d'entrée de la vue, page d'accueil de l'application
+	 * Point d'entrï¿½e de la vue, page d'accueil de l'application
 	 */
 	@GetMapping("/")
 	public String main(Model model) {
@@ -53,11 +55,11 @@ public class WelcomeController {
 	}
 
 	/**
-	 * Rafraichi le contenu de la page sur changement d'année
+	 * Rafraichi le contenu de la page sur changement d'annï¿½e
 	 * 
-	 * @param year  l'année
-	 * @param model model transportant les données
-	 * @return le fragment a retourné
+	 * @param year  l'annï¿½e
+	 * @param model model transportant les donnï¿½es
+	 * @return le fragment a retournï¿½
 	 */
 	@GetMapping("/view/refresh")
 	public String refresh(@RequestParam Integer year, Model model) {
@@ -69,27 +71,31 @@ public class WelcomeController {
 	}
 
 	/**
-	 * Méthode interne permettant d'ajouter les données du site pour l'année à
+	 * Mï¿½thode interne permettant d'ajouter les donnï¿½es du site pour l'annï¿½e ï¿½
 	 * afficher
 	 * 
-	 * @param site        site à afficher
-	 * @param currentYear année sélectionnée
-	 * @param model       model transportant les données
+	 * @param site        site ï¿½ afficher
+	 * @param currentYear annï¿½e sï¿½lectionnï¿½e
+	 * @param model       model transportant les donnï¿½es
 	 */
 	private void initModel(Site site, Integer currentYear, Model model) {
 		Integer minYear = dataPointRepository.findTopBySiteOrderByTimeAsc(site).getTime().getYear();
 		Integer maxYear = dataPointRepository.findTopBySiteOrderByTimeDesc(site).getTime().getYear();
 		List<Integer> years = Stream.iterate(minYear, n -> n + 1).limit((maxYear - minYear) + 1l).map(n -> n)
 				.collect(Collectors.toList());
+		
+		ConsumptionDispatcher dispatcher = buildConsumptionDispatcher(site, currentYear);
+		
 		model.addAttribute("years", years);
 		model.addAttribute("currentYear", currentYear);
 		model.addAttribute("site", site);
+		model.addAttribute("dispatcher", dispatcher);
 	}
 
 	/**
-	 * Retourne les points de consommation d'une année au format json pour highstock
+	 * Retourne les points de consommation d'une annï¿½e au format json pour highstock
 	 * 
-	 * @param year année
+	 * @param year annï¿½e
 	 * @return
 	 */
 	@GetMapping(value = "/data/conso", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -98,10 +104,8 @@ public class WelcomeController {
 		Optional<Site> site = siteRepository.findById(1l);
 		List<double[]> result = new ArrayList<>();
 		if (site.isPresent()) {
-			List<DataPoint> points = dataPointRepository.findBySiteAndTimeBetween(site.get(),
-					LocalDate.of(year, 1, 1).atStartOfDay(),
-					LocalDate.of(year, 12, 31).atStartOfDay().with(LocalTime.MAX));
-			result = points.stream().map(point -> {
+			List<DataPoint> yearPoints = extractYearPoints(site.get(), year);
+			result = yearPoints.stream().map(point -> {
 				double[] array = new double[2];
 				array[0] = DateUtils.secondsFromEpoch(point.getTime()) * 1000l;
 				array[1] = point.getValue();
@@ -109,6 +113,51 @@ public class WelcomeController {
 			}).collect(Collectors.toList());
 		}
 		return result;
+	}
+	
+	/**
+	 * 
+	 * Construit un Consumption dispatcher avec les consommations pour chaque mois
+	 * 
+	 * @param site
+	 * @param currentYear
+	 * @return
+	 */
+	public ConsumptionDispatcher buildConsumptionDispatcher(Site site, int currentYear) {
+		List<List<DataPoint>> yearPoints = new ArrayList<List<DataPoint>>();
+		for(int i=1; i<=12 ; i++) {
+			yearPoints.add(extractMonthPoints(site, currentYear, i));
+		}
+		return new ConsumptionDispatcher(currentYear, yearPoints);
+	}
+	
+	/**
+	 * 
+	 * Extrait les donnÃ©es de consommation pour le mois selectionnÃ©
+	 * 
+	 * @param site
+	 * @param year
+	 * @param month
+	 * @return
+	 */
+	private List<DataPoint> extractMonthPoints(Site site, int year, int month) {
+		LocalDateTime start = LocalDate.of(year, month, 1).atStartOfDay();
+		LocalDateTime end = start.plusMonths(1).minusMinutes(1);
+		return dataPointRepository.findBySiteAndTimeBetween(site, start, end);
+	}
+	
+	/**
+	 * 
+	 * Extrait les donnÃ©es de consommation pour l'annÃ©e selectionnÃ©e
+	 * 
+	 * @param site
+	 * @param year
+	 * @return
+	 */
+	private List<DataPoint> extractYearPoints(Site site, int year) {
+		return dataPointRepository.findBySiteAndTimeBetween(site,
+				LocalDate.of(year, 1, 1).atStartOfDay(),
+				LocalDate.of(year, 12, 31).atStartOfDay().with(LocalTime.MAX));
 	}
 
 }

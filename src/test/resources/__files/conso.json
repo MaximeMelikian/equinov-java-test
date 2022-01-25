@@ -1,5 +1,9 @@
 {
+	"id" : 1,
 	"site" : "Papeterie d''Issy les Moulineaux",
+	"street" : "89 Rue du Gouverneur Général Eboué",
+	"post_code" : "92130",
+	"city" : "Issy les Moulineaux",
 	"unit" : "MW",
 	"values" : [
 		{ "date" :"2018-01-01 00:00", "value" :0.666},

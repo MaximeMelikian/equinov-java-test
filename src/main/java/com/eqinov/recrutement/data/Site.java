@@ -9,7 +9,7 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
 /**
- * Entité Jpa représentant un site client physique
+ * Entitï¿½ Jpa reprï¿½sentant un site client physique
  * 
  * @author Guillaume SIMON - EQINOV
  * @since 24 janv. 2020
@@ -23,13 +23,13 @@ public class Site {
 	private Long id;
 
 	private String name;
-	
+
 	@Embedded
 	private Address address;
 
 	@OneToMany(mappedBy = "site")
 	private List<DataPoint> consos;
-	
+
 	public Long getId() {
 		return id;
 	}
@@ -45,7 +45,7 @@ public class Site {
 	public void setName(String name) {
 		this.name = name;
 	}
-	
+
 	public Address getAddress() {
 		return address;
 	}
@@ -62,4 +62,9 @@ public class Site {
 		this.consos = consos;
 	}
 
+	@Override
+	public String toString() {
+		return getId() + " " + getName() + "\n" + getAddress().getFullAddress() + "\n" + getConsos().size()
+				+ " valeurs";
+	}
 }

@@ -107,6 +107,29 @@
 		}();
 		  
 	</script>
+	<style>
+		.consumption tr td {
+			border : 2px solid black;
+			border-collapse: separate;
+		}
+		
+		.consumption td {
+			padding-left: 15px;
+			padding-right: 15px;
+		}
+		
+		.consumption td.table-align-right {
+			text-align : right;
+			color: green;
+		}
+		
+		.link-display {
+			background-color: orange;
+			border : 1px solid black;
+			margin-top: 10px;
+			padding : 10px;
+		}
+	</style>
 </head>
 
 <body>
@@ -122,7 +145,28 @@
 			
 		<!-- Nom du site et son adresse -->
 		<h2 th:text="${site.name}"></h2>
-		<span th:text="${site.address.fullAddress}"></span>		
+		<span th:text="${site.address.fullAddress}"></span>
+		
+		<!-- Affichage du tableau de consommations pour l'année en cours -->		
+	 	<br>
+	 	<div>
+	 		Consommation totale pour l'année <span th:text="${currentYear}"></span>&nbsp;:&nbsp;
+	 		<strong><span th:text="${dispatcher.yearConsumption.yearValueMWh}"></span>&nbsp;MWh</strong>
+	 	</div>
+	 	<br>
+	 			
+		<table class="consumption">
+			<tr th:each="monthConsumption : ${dispatcher.monthConsumptions}">
+				<td th:text="${monthConsumption.month}"></td>
+				<td class="table-align-right" th:text="${monthConsumption.monthValueMWh} + ' MWh'"></td>
+			</tr>
+		</table>
+		
+		<!-- Lien vers api/conso ne fonctionne pas
+		<div>
+			<a href="/api/conso" class="link-display"> Lien vers api conso </a>	
+		</div>
+		-->
 		
 		<!-- Sélection de l'année à afficher -->
 		<form class="form-inline justify-content-end">
@@ -137,8 +181,8 @@
 			<th:block th:fragment="result">
 		 		<div id="conso"></div>
 			</th:block>
-		</div>		
-	 	
+		</div>
+		
 	</main>
 </body>
 </html>
